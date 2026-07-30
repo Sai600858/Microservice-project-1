@@ -5,15 +5,16 @@
 [![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
 [![React Vite](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blueviolet.svg)](https://vitejs.dev/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1.svg)](https://www.mysql.com/)
+[![Load Balanced](https://img.shields.io/badge/Load%20Balancing-3%20Instances-brightgreen.svg)](#-load-balancing--horizontal-scaling)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A robust, enterprise-grade **Quiz Generator Microservices System** built with **Java 21**, **Spring Boot**, **Spring Cloud (Eureka Service Discovery, API Gateway, OpenFeign)**, **MySQL**, and a modern **React + Vite Dark Mode UI**. 
+A robust, enterprise-grade **Quiz Generator Microservices System** built with **Java 21**, **Spring Boot**, **Spring Cloud (Eureka Service Discovery, API Gateway, OpenFeign, Spring Cloud LoadBalancer)**, **MySQL**, and a modern **React + Vite Dark Mode UI**. 
 
-This system breaks down quiz creation and question management into scalable, decoupled microservices connected via Netflix Eureka Service Registry and unified under a Spring Cloud API Gateway.
+This system features **horizontal scaling with 3 load-balanced instances of QuestionService** connected via Netflix Eureka Service Registry and unified under a Spring Cloud API Gateway.
 
 ---
 
-## 📐 Architecture Overview
+## 📐 Architecture & Load Balancing Overview
 
 ```
                       +-------------------+
@@ -25,24 +26,47 @@ This system breaks down quiz creation and question management into scalable, dec
                       |   API Gateway     |  (Port: 8787)
                       +----+---------+----+
                            |         |
-          +----------------+         +----------------+
-          |                                           |
-          v                                           v
-+-------------------+                       +-------------------+
-|  QuestionService  | <--- (OpenFeign) ---- |    QuizService    |  (Port: 8090)
-+---------+---------+ (Port: 8082)          +---------+---------+
-          |                                           |
-          v                                           v
-   [MySQL QuestionDB]                          [MySQL QuizDB]
+          +----------------+         +-------------------------------------+
+          |                                                                |
+          |               +----------------------------------+             |
+          v               | Spring Cloud Feign LoadBalancer  |             v
++-------------------+     +----------------+-----------------+   +-------------------+
+|    QuizService    | ---------------------+                     |    QuizService    |  (Port: 8090)
++---------+---------+                      |                     +---------+---------+
+          |                                v                               |
+          |           +-----------------------------------------+          |
+          |           |   QuestionService (3 Scaled Instances)  |          |
+          |           +--------------------+--------------------+          |
+          |                                |                               |
+          |       +------------------------+------------------------+      |
+          |       |                        |                        |      |
+          |       v                        v                        v      |
+          |  +-----------+          +-----------+          +-----------+   |
+          |  | Instance 1|          | Instance 2|          | Instance 3|   |
+          |  | (Port 8082|          | (Port 8083|          | (Port 8084|   |
+          |  +-----+-----+          +-----+-----+          +-----+-----+   |
+          |        |                      |                      |         |
+          v        v                      v                      v         v
+     [MySQL QuizDB]                   [MySQL QuestionDB]            [MySQL QuizDB]
    
-   ============================================================
-              | Registers With Service Discovery |
-              v                                  v
-                   +------------------------+
-                   |    Service Registry    |  (Port: 8761)
-                   |    (Eureka Server)     |
-                   +------------------------+
+   =============================================================================
+                  | Registers With Service Discovery |
+                  v                                  v
+                       +------------------------+
+                       |    Service Registry    |  (Port: 8761)
+                       |    (Eureka Server)     |
+                       +------------------------+
 ```
+
+---
+
+## ⚡ Load Balancing & Horizontal Scaling
+
+To ensure high availability, fault tolerance, and high-throughput question processing:
+
+- **3 Scaled Instances of `QuestionService`**: Runs across multiple ports (e.g. `8082`, `8083`, `8084`).
+- **Client-Side Load Balancing**: `QuizService` uses `@FeignClient("QUESTIONSERVICE")` backed by **Spring Cloud LoadBalancer** to automatically distribute HTTP requests across all 3 active instances in round-robin fashion.
+- **Gateway Load Balancing**: `Api-Gateway` uses `lb://QUESTIONSERVICE` to balance incoming client traffic seamlessly.
 
 ---
 
@@ -53,7 +77,8 @@ This system breaks down quiz creation and question management into scalable, dec
 - **Framework:** Spring Boot 4.1.0 / 3.5.4
 - **Microservice Ecosystem (Spring Cloud 2025):**
   - **Service Discovery:** Spring Cloud Netflix Eureka Server / Client
-  - **API Gateway:** Spring Cloud Gateway
+  - **API Gateway:** Spring Cloud Gateway with `lb://` routing
+  - **Load Balancer:** Spring Cloud LoadBalancer (Round-Robin distribution across 3 QuestionService instances)
   - **Inter-Service Communication:** Declarative REST Client with Spring Cloud OpenFeign
 - **Persistence & Database:** Spring Data JPA (Hibernate), MySQL 8.0+
 - **Build Tools:** Apache Maven & Node / npm
@@ -62,13 +87,13 @@ This system breaks down quiz creation and question management into scalable, dec
 
 ## 📂 Microservices & Frontend Summary
 
-| Component | Port / Location | Description | Tech / Database |
-| :--- | :---: | :--- | :--- |
-| **Frontend UI** | `http://localhost:5173` | Interactive Quiz Dashboard, Quiz Player, Question Bank, & Microservices Status inspector. | React 19, Vite |
-| **Service-Registry** | `8761` | Eureka Service Discovery Server where all microservices register dynamically. | Spring Cloud Eureka |
-| **Api-Gateway** | `8787` | Central routing gateway handling incoming HTTP traffic to downstream services. | Spring Cloud Gateway |
-| **QuestionService** | Dynamic / `8082` | Manages the Question Bank (CRUD), categorization, difficulty levels, and score calculation. | MySQL `microservices_questiondb` |
-| **QuizService** | `8090` | Handles quiz generation, aggregates questions via OpenFeign from QuestionService, and evaluates scores. | MySQL `microservices_quizdb` |
+| Component | Port / Location | Instances | Description | Tech / Database |
+| :--- | :---: | :---: | :--- | :--- |
+| **Frontend UI** | `http://localhost:5173` | 1 | Interactive Quiz Dashboard, Quiz Player, Question Bank, & Microservices Status inspector. | React 19, Vite |
+| **Service-Registry** | `8761` | 1 | Eureka Service Discovery Server where all microservices register dynamically. | Spring Cloud Eureka |
+| **Api-Gateway** | `8787` | 1 | Central routing gateway with round-robin load balancing. | Spring Cloud Gateway |
+| **QuestionService** | `8082`, `8083`, `8084` | **3** | Manages Question Bank (CRUD), categorization, difficulty filtering, & score calculation. | MySQL `microservices_questiondb` |
+| **QuizService** | `8090` | 1 | Handles quiz generation, aggregates questions via Feign load balancer, and evaluates scores. | MySQL `microservices_quizdb` |
 
 ---
 
@@ -94,7 +119,7 @@ CREATE DATABASE IF NOT EXISTS microservices_quizdb;
 
 ---
 
-## 🚀 How to Run locally
+## 🚀 How to Run Locally
 
 ### 1. Run the Frontend Web Application
 
@@ -116,11 +141,24 @@ mvn spring-boot:run
 ```
 > Eureka Dashboard: `http://localhost:8761`
 
-#### Step 2: Start Question Service
+#### Step 2: Start 3 Load-Balanced Instances of QuestionService
+
+Run these 3 commands in 3 separate terminal windows:
+
 ```bash
+# Terminal 1 - QuestionService Instance 1
 cd QuestionService
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
+
+# Terminal 2 - QuestionService Instance 2
+cd QuestionService
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8083"
+
+# Terminal 3 - QuestionService Instance 3
+cd QuestionService
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8084"
 ```
+> Verify in Eureka Dashboard (`http://localhost:8761`) that 3 instances of **`QUESTIONSERVICE`** are registered!
 
 #### Step 3: Start Quiz Service
 ```bash
@@ -142,7 +180,7 @@ All requests are routed through the **API Gateway** (`http://localhost:8787`).
 
 ### 1. Question Service Endpoints (`http://localhost:8787/question`)
 
-- **GET** `/question/allQuestions` - Fetch all questions
+- **GET** `/question/allQuestions` - Fetch all questions (Load balanced across 3 instances)
 - **GET** `/question/category/{category}` - Fetch questions by category
 - **POST** `/question/add` - Add new question
 - **POST** `/question/adds` - Bulk add questions
@@ -162,7 +200,7 @@ All requests are routed through the **API Gateway** (`http://localhost:8787`).
 
 ```bash
 git add .
-git commit -m "Add React Vite microservices frontend and complete platform UI"
+git commit -m "Update README with 3 QuestionService load balancing instances architecture"
 git push -u origin main
 ```
 
