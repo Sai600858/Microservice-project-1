@@ -1,0 +1,15 @@
+#server:
+#  port: 8787
+#
+#spring:
+#  application:
+#    name: API-GATEWAY
+#
+#  cloud:
+#    gateway:
+#      mvc:
+#        routes:
+#          - id: questionservice
+#            uri: http://localhost:8082
+#            predicates:
+#              - Path=/question/**
