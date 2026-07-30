@@ -1,7 +1,5 @@
 package com.sumit.QuizService.Controller;
 
-
-import com.sumit.QuizService.Dao.QuizDao;
 import com.sumit.QuizService.Dto.QuizDto;
 import com.sumit.QuizService.Model.QuestionWrapper;
 import com.sumit.QuizService.Model.Response;
@@ -25,7 +23,7 @@ public class QuizController {
         return quizService.createQuiz(quizDto.getCategoryName(), quizDto.getNumQuestions(), quizDto.getTitle());
     }
 
-    @PostMapping("/get/{id}")
+    @RequestMapping(value = "/get/{id}", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<List<QuestionWrapper>> getQuizQuestions(@PathVariable Integer id){
         return quizService.getQuizQuestions(id);
     }
@@ -34,6 +32,4 @@ public class QuizController {
     public ResponseEntity<Integer> submitQuiz(@PathVariable Integer id, @RequestBody List<Response> responses){
         return quizService.calculateResult(id, responses);
     }
-
-
 }

@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Play, PlusCircle, HelpCircle, BookOpen, Layers, CheckCircle2, Zap, Cpu, Server, ShieldCheck } from 'lucide-react';
+import { Play, PlusCircle, BookOpen, Layers, CheckCircle2, Zap, Cpu, Server, ShieldCheck } from 'lucide-react';
 import { createQuiz } from '../services/api';
 
 export default function Dashboard({ questions, onLaunchQuiz, onOpenAddQuestion, setActiveTab }) {
-  const [quizTitle, setQuizTitle] = useState('Spring Boot & Microservices Test');
-  const [category, setCategory] = useState('Java');
-  const [numQuestions, setNumQuestions] = useState(4);
+  const [quizTitle, setQuizTitle] = useState('Microservices Assessment Test');
+  const [category, setCategory] = useState('Programming');
+  const [numQuestions, setNumQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
+
+  // Extract dynamic categories from loaded questions
+  const uniqueCategories = Array.from(new Set(questions.map(q => q.category).filter(Boolean)));
+  const categoryOptions = uniqueCategories.length ? uniqueCategories : ['Programming', 'Spring Boot', 'Database', 'Algorithms', 'Geography'];
 
   // Stats calculation
   const totalQuestions = questions.length;
-  const categories = Array.from(new Set(questions.map(q => q.category)));
   const easyCount = questions.filter(q => q.difficultylevel?.toLowerCase() === 'easy').length;
   const mediumCount = questions.filter(q => q.difficultylevel?.toLowerCase() === 'medium').length;
   const hardCount = questions.filter(q => q.difficultylevel?.toLowerCase() === 'hard').length;
@@ -19,9 +22,16 @@ export default function Dashboard({ questions, onLaunchQuiz, onOpenAddQuestion, 
     e.preventDefault();
     setLoading(true);
     try {
-      await createQuiz(category, Number(numQuestions), quizTitle);
+      const res = await createQuiz(category, Number(numQuestions), quizTitle);
       setLoading(false);
-      onLaunchQuiz(1); // Launch default or generated quiz ID
+      
+      // Extract created Quiz ID from response string (e.g. "Quiz Created Successfully with ID: 5")
+      let createdId = 1;
+      if (typeof res === 'string') {
+        const match = res.match(/ID:\s*(\d+)/i);
+        if (match) createdId = Number(match[1]);
+      }
+      onLaunchQuiz(createdId);
     } catch (err) {
       setLoading(false);
       onLaunchQuiz(1);
@@ -128,7 +138,7 @@ export default function Dashboard({ questions, onLaunchQuiz, onOpenAddQuestion, 
             <Layers size={26} />
           </div>
           <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{categories.length || 1}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{uniqueCategories.length || 1}</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>Active Categories</div>
           </div>
         </div>
@@ -215,10 +225,9 @@ export default function Dashboard({ questions, onLaunchQuiz, onOpenAddQuestion, 
                   value={category} 
                   onChange={(e) => setCategory(e.target.value)}
                 >
-                  <option value="Java">Java</option>
-                  <option value="Python">Python</option>
-                  <option value="Microservices">Microservices</option>
-                  <option value="Spring Boot">Spring Boot</option>
+                  {categoryOptions.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
