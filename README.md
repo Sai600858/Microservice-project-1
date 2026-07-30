@@ -3,10 +3,11 @@
 [![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2025.1.2-blue.svg)](https://spring.io/projects/spring-cloud)
+[![React Vite](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-blueviolet.svg)](https://vitejs.dev/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1.svg)](https://www.mysql.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A robust, enterprise-grade **Quiz Generator Microservices System** built with **Java 21**, **Spring Boot**, **Spring Cloud (Eureka Service Discovery, API Gateway, OpenFeign)**, and **MySQL**. 
+A robust, enterprise-grade **Quiz Generator Microservices System** built with **Java 21**, **Spring Boot**, **Spring Cloud (Eureka Service Discovery, API Gateway, OpenFeign)**, **MySQL**, and a modern **React + Vite Dark Mode UI**. 
 
 This system breaks down quiz creation and question management into scalable, decoupled microservices connected via Netflix Eureka Service Registry and unified under a Spring Cloud API Gateway.
 
@@ -16,7 +17,7 @@ This system breaks down quiz creation and question management into scalable, dec
 
 ```
                       +-------------------+
-                      |   Client / UI     |
+                      |   React Web UI    |  (Port: 5173)
                       +---------+---------+
                                 |
                                 v
@@ -47,26 +48,38 @@ This system breaks down quiz creation and question management into scalable, dec
 
 ## 🛠️ Tech Stack & Technologies
 
-- **Programming Language:** Java 21
+- **Frontend:** React 19, Vite, Lucide Icons, Canvas Confetti, Custom Glassmorphism Dark Mode CSS
+- **Backend Language:** Java 21
 - **Framework:** Spring Boot 4.1.0 / 3.5.4
 - **Microservice Ecosystem (Spring Cloud 2025):**
   - **Service Discovery:** Spring Cloud Netflix Eureka Server / Client
   - **API Gateway:** Spring Cloud Gateway
   - **Inter-Service Communication:** Declarative REST Client with Spring Cloud OpenFeign
 - **Persistence & Database:** Spring Data JPA (Hibernate), MySQL 8.0+
-- **Build Tool:** Apache Maven
-- **Utilities:** Lombok
+- **Build Tools:** Apache Maven & Node / npm
 
 ---
 
-## 📂 Microservices Summary
+## 📂 Microservices & Frontend Summary
 
-| Microservice | Port | Description | Database |
+| Component | Port / Location | Description | Tech / Database |
 | :--- | :---: | :--- | :--- |
-| **Service-Registry** | `8761` | Eureka Service Discovery Server where all microservices register dynamically. | N/A |
-| **Api-Gateway** | `8787` | Central routing gateway handling incoming HTTP traffic to downstream services. | N/A |
-| **QuestionService** | Dynamic / `8082` | Manages the Question Bank (CRUD), categorization, difficulty levels, and score calculation. | `microservices_questiondb` |
-| **QuizService** | `8090` | Handles quiz generation, aggregates questions via OpenFeign from QuestionService, and evaluates scores. | `microservices_quizdb` |
+| **Frontend UI** | `http://localhost:5173` | Interactive Quiz Dashboard, Quiz Player, Question Bank, & Microservices Status inspector. | React 19, Vite |
+| **Service-Registry** | `8761` | Eureka Service Discovery Server where all microservices register dynamically. | Spring Cloud Eureka |
+| **Api-Gateway** | `8787` | Central routing gateway handling incoming HTTP traffic to downstream services. | Spring Cloud Gateway |
+| **QuestionService** | Dynamic / `8082` | Manages the Question Bank (CRUD), categorization, difficulty levels, and score calculation. | MySQL `microservices_questiondb` |
+| **QuizService** | `8090` | Handles quiz generation, aggregates questions via OpenFeign from QuestionService, and evaluates scores. | MySQL `microservices_quizdb` |
+
+---
+
+## 💻 Frontend Features
+
+- **📊 Interactive Dashboard:** Overview of total questions, categories, and microservice status.
+- **⚡ Quick Quiz Generator:** Create & launch quizzes dynamically by specifying category and question counts.
+- **📝 Interactive Quiz Player:** Smooth stepper interface, progress bars, selectable options, and automated scoring.
+- **🎉 Animated Scorecard:** Performance gauge with score breakdown and victory confetti animations.
+- **📚 Question Bank Management:** Search, category filters (Java, Python, etc.), difficulty filters (Easy, Medium, Hard), and Add Question modal.
+- **⚙️ Microservices Topology Inspector:** Real-time health monitoring of Gateway, Eureka, QuestionService, and QuizService with a built-in Demo Mode toggle.
 
 ---
 
@@ -79,31 +92,29 @@ CREATE DATABASE IF NOT EXISTS microservices_questiondb;
 CREATE DATABASE IF NOT EXISTS microservices_quizdb;
 ```
 
-> **Note:** Update database credentials (`spring.datasource.username` and `spring.datasource.password`) in `QuestionService/src/main/resources/application.properties` and `QuizService/src/main/resources/application.properties` if your local MySQL configuration differs.
-
 ---
 
 ## 🚀 How to Run locally
 
-Follow the specific startup order to ensure microservices register properly with the Eureka discovery server.
-
-### 1. Build All Microservices
-
-Run the Maven package command in each service directory (or build via your IDE):
+### 1. Run the Frontend Web Application
 
 ```bash
-# Clean and build each service
-mvn clean package -DskipTests
+cd frontend
+npm install
+npm run dev
 ```
+> Open your browser at `http://localhost:5173`
 
-### 2. Start Services in Order
+### 2. Build & Start Backend Microservices
+
+Start services in this order:
 
 #### Step 1: Start Service Registry (Eureka Server)
 ```bash
 cd Service-Registry
 mvn spring-boot:run
 ```
-> Eureka Dashboard will be accessible at: `http://localhost:8761`
+> Eureka Dashboard: `http://localhost:8761`
 
 #### Step 2: Start Question Service
 ```bash
@@ -127,110 +138,31 @@ mvn spring-boot:run
 
 ## 🔌 API Endpoint Documentation
 
-All requests can be routed through the **API Gateway** (`http://localhost:8787`) or called directly on individual service ports.
+All requests are routed through the **API Gateway** (`http://localhost:8787`).
 
-### 1. Question Service Endpoints (`http://localhost:8787/question` or `http://localhost:8082/question`)
+### 1. Question Service Endpoints (`http://localhost:8787/question`)
 
-#### Get All Questions
-- **GET** `/question/allQuestions`
-- **Response:** `200 OK` (List of questions)
+- **GET** `/question/allQuestions` - Fetch all questions
+- **GET** `/question/category/{category}` - Fetch questions by category
+- **POST** `/question/add` - Add new question
+- **POST** `/question/adds` - Bulk add questions
+- **GET** `/question/generate?categoryName=Java&numQuestions=5` - Generate question IDs
+- **POST** `/question/getQuestions` - Fetch question wrappers by IDs
+- **POST** `/question/getScore` - Calculate quiz score
 
-#### Get Questions by Category
-- **GET** `/question/category/{category}`
-- **Example:** `/question/category/Java`
+### 2. Quiz Service Endpoints (`http://localhost:8787/quiz`)
 
-#### Add Single Question
-- **POST** `/question/add`
-- **Body:**
-```json
-{
-  "questionTitle": "What is JVM?",
-  "option1": "Java Virtual Machine",
-  "option2": "Java Variable Method",
-  "option3": "Joint Virtual Memory",
-  "option4": "None of the above",
-  "rightAnswer": "Java Virtual Machine",
-  "difficultylevel": "Easy",
-  "category": "Java"
-}
-```
-
-#### Add Multiple Questions (Bulk Add)
-- **POST** `/question/adds`
-- **Body:** `[ { ... }, { ... } ]`
-
-#### Generate Question IDs for Quiz (Internal / Feign)
-- **GET** `/question/generate?categoryName=Java&numQuestions=5`
-
-#### Fetch Questions by IDs (Internal / Feign)
-- **POST** `/question/getQuestions`
-- **Body:** `[1, 2, 3]`
-
-#### Calculate Score (Internal / Feign)
-- **POST** `/question/getScore`
-- **Body:**
-```json
-[
-  { "id": 1, "response": "Java Virtual Machine" }
-]
-```
-
----
-
-### 2. Quiz Service Endpoints (`http://localhost:8787/quiz` or `http://localhost:8090/quiz`)
-
-#### Create Quiz
-- **POST** `/quiz/create`
-- **Body:**
-```json
-{
-  "categoryName": "Java",
-  "numQuestions": 5,
-  "title": "Java Fundamentals Quiz"
-}
-```
-- **Response:** `201 Created` - `"Success"`
-
-#### Get Quiz Questions for User
-- **POST** `/quiz/get/{id}`
-- **Example:** `/quiz/get/1`
-- **Response:** Returns list of `QuestionWrapper` (without revealing correct answers).
-
-#### Submit Quiz & Get Score
-- **POST** `/quiz/submit/{id}`
-- **Example:** `/quiz/submit/1`
-- **Body:**
-```json
-[
-  { "id": 1, "response": "Java Virtual Machine" },
-  { "id": 2, "response": "Object Oriented" }
-]
-```
-- **Response:** `200 OK` (Returns integer score, e.g., `2`)
+- **POST** `/quiz/create` - Create new quiz
+- **POST** `/quiz/get/{id}` - Get quiz question wrappers for user
+- **POST** `/quiz/submit/{id}` - Submit quiz responses & return score
 
 ---
 
 ## 🐙 Pushing to GitHub
 
-If you haven't initialized Git yet, follow these commands from the root directory (`QuizGenerator_Microservices`):
-
 ```bash
-# 1. Initialize Git Repository
-git init
-
-# 2. Add files to staging (respecting .gitignore)
 git add .
-
-# 3. Commit changes
-git commit -m "Initial commit: Quiz Generator Microservices with Spring Boot, Eureka & Gateway"
-
-# 4. Set main branch name
-git branch -M main
-
-# 5. Add remote GitHub repository (Replace URL with your repository link)
-git remote add origin https://github.com/YOUR_USERNAME/QuizGenerator_Microservices.git
-
-# 6. Push to GitHub
+git commit -m "Add React Vite microservices frontend and complete platform UI"
 git push -u origin main
 ```
 
